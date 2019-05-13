@@ -16,6 +16,23 @@ else:
 import bsdiff4.core as core
 
 
+def write_patch_no_compress(fo, len_dst, tcontrol, bdiff, bextra):
+    """write a BSDIFF4-format patch to stream 'fo'
+    """
+    MAGIC = b'DIFF2YA0'
+    fo.write(MAGIC)
+    faux = StringIO()
+    # write control tuples as series of offts
+    for c in tcontrol:
+        for x in c:
+            faux.write(core.encode_int64(x))
+    bcontrol = faux.getvalue()
+    for n in len(bcontrol), len(bdiff), len_dst:
+        fo.write(core.encode_int64(n))
+    fo.write(bcontrol)
+    fo.write(bdiff)
+    fo.write(bextra)
+
 def write_patch(fo, len_dst, tcontrol, bdiff, bextra):
     """write a BSDIFF4-format patch to stream 'fo'
     """
@@ -73,6 +90,15 @@ def diff(src_bytes, dst_bytes):
     """
     faux = StringIO()
     write_patch(faux, len(dst_bytes), *core.diff(src_bytes, dst_bytes))
+    return faux.getvalue()
+
+def diff_raw(src_bytes, dst_bytes):
+    """diff(src_bytes, dst_bytes) -> bytes
+
+    Return a BSDIFF4-format patch (from src_bytes to dst_bytes) as bytes.
+    """
+    faux = StringIO()
+    write_patch_no_compress(faux, len(dst_bytes), *core.diff(src_bytes, dst_bytes))
     return faux.getvalue()
 
 
